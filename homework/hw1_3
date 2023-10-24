@@ -25,7 +25,7 @@ if problem == 1:
 else:
     # Create an interaction term for 'diagnosis' and 'sex'
     df['diagnosis_sex'] = df['diagnosis'] * df['sex']
-    independent_vars = df[['diagnosis', 'sex', 'age','diagnosis_sex']] # preditor[x0,x1,x2,x3]
+    independent_vars = df[['diagnosis', 'sex', 'age','diagnosis:sex']] # preditor[x0,x1,x2,x3]
 
     # Set your significance level
     alpha = 0.05

@@ -1,20 +1,23 @@
-from scipy.stats import chi2
+from scipy.stats import chi2,chisquare
 
-# 1(a) 1(b) one sample chi-sqaured test
+# 2(a) 2(b) one sample chi-sqaured test
+p = 2 # define problem
+observed = [85,15]
+if p == 1:
+    expected = [50,50]
+else:
+    expected = [75,25]
 
-# chi-square statistic
-chi_stat = (85-75)**2/75 + (15-25)**2/25 # replace with your chi-square statistic
+# chi-square statistic & p-value
+chi2, p_value = chisquare(observed,expected)
 df = 1  # replace with your degrees of freedom
 
-# calculate p-value
-p_value = 1 - chi2.cdf(chi_stat, df)
-
-print(f"Chi-square statistic: {chi_stat}")
+print(f"Chi-square statistic: {chi2}")
 print(f"Degrees of freedom: {df}")
 print(f"P-value: {p_value}")
 
 
-# 1(c) two proportion z-test
+# 2(c) two proportion z-test
 import numpy as np
 from statsmodels.stats.proportion import proportions_ztest,  proportions_chisquare
 

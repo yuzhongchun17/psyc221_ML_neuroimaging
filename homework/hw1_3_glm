@@ -1,0 +1,64 @@
+# Importing necessary libraries
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Loading the dataset
+df = pd.read_csv('homework/data_assignment_1.csv')
+
+# Convert categorical variables into dummy/indicator variables, assuming 'sex' and 'diagnosis' are categorical
+df['sex'] = pd.get_dummies(df['sex'], drop_first=True)  # Assuming sex is binary; drop_first=True to avoid multicollinearity
+df['diagnosis'] = pd.get_dummies(df['diagnosis'], drop_first=True)
+
+# Defining the regions
+regions = ['Frontal_Sup', 'Frontal_Inf', 'Cingulum_Ant', 'Cingulum_Post', 'Parietal_Sup', 'Parietal_Inf', 'Occipital_Sup', 'Occipital_Inf', 'Temporal_Sup', 'Temporal_Inf']
+
+# Creating a placeholder for model summaries
+summaries = []
+
+# Iterating over each region to create and fit a model
+for region in regions:
+    print(f"\nPerforming GLM for {region}:")
+
+    # Selecting the target
+    y = df[region]
+
+    # Features for the model
+    X = df[['age', 'sex', 'diagnosis']]
+    X = sm.add_constant(X)  # Adding a constant to the model (intercept)
+
+    # Fitting GLM model
+    model = sm.GLM(y, X, family=sm.families.Gaussian())  # Gaussian family for continuous outcome variable; change as needed
+    results = model.fit()
+
+    # Saving the summary
+    summaries.append({
+        'region': region,
+        'summary': results.summary()
+    })
+
+    # Printing the summary
+    print(results.summary())
+
+# Visualization (Optional: adjust based on your preference)
+# We can create a plot for a specific region showing the actual vs predicted values
+
+# Specify the region you want to plot
+region_to_plot = 'Cingulum_Ant'
+
+# Get the predicted values for the chosen region
+X = df[['age', 'sex', 'diagnosis']]
+X = sm.add_constant(X)  # Adding a constant to the model (intercept)
+predicted_values = sm.GLM(df[region_to_plot], X, family=sm.families.Gaussian()).fit().predict(X)
+
+# Create a scatter plot
+plt.figure(figsize=(10, 6))
+plt.scatter(df['age'], df[region_to_plot], color='blue', label='Actual values')
+plt.scatter(df['age'], predicted_values, color='red', label='Predicted values')
+plt.title(f'Actual vs Predicted Biomarker levels for {region_to_plot}')
+plt.xlabel('Age')
+plt.ylabel('Biomarker Levels')
+plt.legend()
+plt.show()

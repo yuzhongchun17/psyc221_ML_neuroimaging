@@ -1,0 +1,150 @@
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import shapiro
+from statsmodels.multivariate.manova import MANOVA
+import os
+
+# Save the plot to the same folder as the code
+# Get the directory of the current file
+current_dir = os.path.dirname(os.path.realpath(__file__))
+
+# Loading the dataset
+df = pd.read_csv('homework/data_assignment_1.csv')
+# Dependent variables
+dependent_vars = df[['Frontal_Sup', 'Frontal_Inf', 'Cingulum_Ant', 'Cingulum_Post', 'Parietal_Sup', 'Parietal_Inf', 'Occipital_Sup', 'Occipital_Inf', 'Temporal_Sup', 'Temporal_Inf']] # outcome
+# Independent variable
+iv = 'diagnosis'
+# Covariates
+covariates = ['age','sex']
+# Interaction term
+df['sex_diagnosis_interaction'] = df['sex'] * df['diagnosis']
+
+# Adjust dependent variables for the covariates
+residuals_df = df.copy()
+
+for region in dependent_vars:
+    model = sm.OLS(df[region], sm.add_constant(df[covariates])).fit()
+    residuals_df[region] = model.resid
+
+status = 4 # 1: check assumption for MANCOVA, 2: perform MANCOVA on the data set, 3: Visualization, 4: test diagnosis-sex interaction, 5: visulization of diagnosis-sex interaction
+
+if status == 1:
+    p_values_normality = {}
+
+    # Test each dependent variable for normality
+    for column in dependent_vars:
+        _, p_value = shapiro(df[column])
+        p_values_normality[column] = p_value
+
+    print("Multivariate Normality p-values:")
+    for column, p_value in p_values_normality.items():
+        if p_value < 0.05:
+            print(f"{column}: p-value = {p_value} - Reject the null hypothesis of normality")
+        else:
+            print(f"{column}: p-value = {p_value} - Fail to reject the null hypothesis of normality")
+    print("\n")
+
+    from scipy.stats import levene
+
+    p_values_levene = {}
+
+    # Test homogeneity of variances for each dependent variable
+    for column in dependent_vars:
+        _, p_value = levene(df[df['diagnosis'] == 0][column], df[df['diagnosis'] == 1][column])
+        p_values_levene[column] = p_value
+
+    print("Homogeneity of Variances p-values:")
+    for column, p_value in p_values_levene.items():
+        if p_value < 0.05:
+            print(f"{column}: p-value = {p_value} - Reject the null hypothesis of equal variances")
+        else:
+            print(f"{column}: p-value = {p_value} - Fail to reject the null hypothesis of equal variances")
+    print("\n")
+
+    import matplotlib.pyplot as plt
+
+    # Scatter plots: Linear Relationships Between Covariates and Dependent Variables
+    for column in dependent_vars:
+        plt.scatter(df['sex'], df[column])
+        plt.title(f"Scatterplot of sex vs. {column}")
+        plt.xlabel("sex")
+        plt.ylabel(column)
+        plt.show()
+elif status == 2:
+    # Join formula with : depedent variables and independent variables
+    formula = ' + '.join(dependent_vars) + ' ~ diagnosis'
+    manova = MANOVA.from_formula(formula, data=residuals_df)
+
+    # Create MANOVA model using the residuals
+    manova = MANOVA.from_formula(formula, data=df)
+    
+    # Display the results
+    result = manova.mv_test()
+    print(result)
+elif status == 3:
+    # Melt the residuals DataFrame to long format for easier plotting
+    residuals_melted = residuals_df.melt(id_vars='diagnosis', value_vars=dependent_vars)
+
+    plt.figure(figsize=(15, 10))
+    sns.boxplot(data=residuals_melted, x='variable', y='value', hue='diagnosis')
+    plt.xticks(rotation=45)
+    plt.xlabel("Regions")
+    plt.ylabel("Adjusted Values (Residuals)")
+    plt.title("Effect of Diagnosis on Various Regions (Adjusted for Covariates)")
+    plt.legend(title='Diagnosis')
+    plt.tight_layout()
+    
+    # Specify the name of the file to save the plot as
+    filename = "residuals_boxplot.png"
+    # The complete path to save the file
+    file_path = os.path.join(current_dir, filename)
+    plt.savefig(file_path)
+    plt.show()
+
+elif status == 4:
+    # Join formula with : depedent variables and independent variables
+    formula = ' + '.join(dependent_vars) + ' ~ sex_diagnosis_interaction'
+    
+    # Create MANOVA model using the residuals
+    manova = MANOVA.from_formula(formula, data=residuals_df)
+    
+    # Display the results
+    result = manova.mv_test()
+    print(result)
+elif status ==5:
+    # Melt the residuals DataFrame to long format for easier plotting
+    residuals_melted = residuals_df.melt(id_vars='sex_diagnosis_interaction', value_vars=dependent_vars)
+
+    plt.figure(figsize=(15, 10))
+    sns.boxplot(data=residuals_melted, x='variable', y='value', hue='sex_diagnosis_interaction')
+    plt.xticks(rotation=45)
+    plt.xlabel("Regions")
+    plt.ylabel("Adjusted Values (Residuals)")
+    plt.title("Effect of Diagnosis-Sex Interaction on Various Regions (Adjusted for Covariates)")
+    plt.legend(title='sex_diagnosis_interaction')
+    plt.tight_layout()
+
+    # Specify the name of the file to save the plot as
+    filename = "diagnosis_sex_interaction_boxplots.png"
+    # The complete path to save the file
+    file_path = os.path.join(current_dir, filename)
+    plt.savefig(file_path)
+
+    plt.show()
+    # melted_df = pd.melt(residuals_df, id_vars=['diagnosis', 'sex'], value_vars=dependent_vars, var_name='Region', value_name='Value')
+    # plt.figure(figsize=(15, 10))
+    # sns.boxplot(data=melted_df, x='Region', y='Value', hue='sex', palette="Set1")
+
+    # # Adding split bars for diagnosis conditions
+    # sns.swarmplot(data=melted_df, x='Region', y='Value', hue='diagnosis', dodge=True, marker='o', alpha=0.5, s=3)
+
+    # plt.title('Effect of Sex on Disease for each Region')
+    # plt.ylabel('Value (adjusted for covariates)')
+    # plt.xlabel('Regions')
+    # plt.legend(title='Sex & Diagnosis', bbox_to_anchor=(1.05, 1), loc='upper left')
+    # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # plt.show()
