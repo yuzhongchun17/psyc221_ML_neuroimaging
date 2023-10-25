@@ -1,1 +1,1 @@
-# psyc221_ML_neuroimaging
+# ML4N
