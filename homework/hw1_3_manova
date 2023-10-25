@@ -29,7 +29,7 @@ for region in dependent_vars:
     model = sm.OLS(df[region], sm.add_constant(df[covariates])).fit()
     residuals_df[region] = model.resid
 
-status = 4 # 1: check assumption for MANCOVA, 2: perform MANCOVA on the data set, 3: Visualization, 4: test diagnosis-sex interaction, 5: visulization of diagnosis-sex interaction
+status = 5 # 1: check assumption for MANCOVA, 2: perform MANCOVA on the data set, 3: Visualization, 4: test diagnosis-sex interaction, 5: visulization of diagnosis-sex interaction
 
 if status == 1:
     p_values_normality = {}
