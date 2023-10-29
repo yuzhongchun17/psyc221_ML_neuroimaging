@@ -33,7 +33,8 @@ label = [0, 0, 0, 1, 1, 0, 1, 0, 1, 1]
 # print("P-value:", p_val)
 
 # -------------------------- linear regression
-covariates = sm.add_constant(np.column_stack((left_hippocampus, right_hippocampus)))
+data = np.column_stack((left_hippocampus, right_hippocampus))
+covariates = sm.add_constant(data)
 model = sm.GLM(label,covariates).fit()
 print(model.params)
 # # # Getting coefficients
