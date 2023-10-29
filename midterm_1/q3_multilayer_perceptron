@@ -1,0 +1,139 @@
+# import numpy as np
+# import matplotlib.pyplot as plt
+
+# # Seed for reproducibility
+# np.random.seed(42)
+
+# # Using the previous synthetic data for red crosses (15 points) close to the origin
+# red_r = 0.5 * np.random.rand(15)  # radii
+# red_theta = 2 * np.pi * np.random.rand(15)  # angles
+# red_x = red_r * np.cos(red_theta)
+# red_y = red_r * np.sin(red_theta)
+
+# # Adjusting synthetic data for blue diamonds (15 points) to be closer to the red points
+# blue_r = 0.6 + 0.2 * np.random.rand(15)  # radii, starting from 0.6 to 0.8 range
+# blue_theta = 2 * np.pi * np.random.rand(15)  # angles
+# blue_x = blue_r * np.cos(blue_theta)
+# blue_y = blue_r * np.sin(blue_theta)
+
+# # # Plotting the data
+# # plt.scatter(red_x, red_y, color='red', marker='x', label='Red Crosses')
+# # plt.scatter(blue_x, blue_y, color='blue', marker='D', label='Blue Diamonds')
+# # plt.xlabel('X-axis')
+# # plt.ylabel('Y-axis')
+# # plt.title('Adjusted Synthetic Non-linear Dataset')
+# # plt.legend()
+# # plt.grid(True)
+# # plt.axis('equal')  # to ensure the circular distribution is clear
+# # plt.show()
+
+# # To convert to numpy array
+# crosses = np.column_stack((red_x, red_y))
+# diamonds = np.column_stack((blue_x, blue_y))
+
+# # print("Red Points (Cross):")
+# # print(red_points)
+# # print("\nBlue Points (Diamond):")
+# # print(blue_points)
+
+
+
+
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from sklearn.neural_network import MLPClassifier
+
+# # # Approximated data based on the given image
+# # # Approximated data based on the given image
+# # diamonds = np.array([
+# #     [-1, 3], [0, 3], [1, 3],
+# #     [-2, 2],  [2, 2],
+# #     [-3, 1], [3, 1],
+# #     [-3, 0], [-2, 0], [2, 0], [3, 0],
+# #     [-3, -1],[3, -1],
+# #     [-2, -2],[2, -2],
+# #     [-1, -3], [0, -3], [1, -3]
+# # ])
+
+# # crosses = np.array([
+# #     [-1, 2], [1, 2],
+# #     [-2, 1], [2, 1],
+# #     [-1, 1], [1, 1],
+# #     [-1, 0], [0, 0], [1, 0],
+# #     [-2, -1], [2, -1],
+# #     [-1, -1], [1, -1],
+# #     [-1, -2], [1, -2]
+# # ])
+
+# X = np.vstack([diamonds, crosses])
+# y = np.hstack([np.ones(diamonds.shape[0]), np.zeros(crosses.shape[0])])
+
+# # Train the MLP model
+# clf = MLPClassifier(hidden_layer_sizes=(10, 5), max_iter=5000, activation='relu', solver='adam').fit(X, y)
+
+# # Create mesh grid for the decision boundary
+# h = 0.01
+# x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+# y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+# xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+#                      np.arange(y_min, y_max, h))
+
+# Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+# Z = Z.reshape(xx.shape)
+
+# # Plotting
+# plt.contourf(xx, yy, Z, alpha=0.8)
+# plt.scatter(diamonds[:, 0], diamonds[:, 1], color='blue', label='Diamonds')
+# plt.scatter(crosses[:, 0], crosses[:, 1], color='red', marker='x', label='Crosses')
+# plt.legend()
+# plt.xlim(X[:, 0].min() - 0.5, X[:, 0].max() + 0.5)
+# plt.ylim(X[:, 1].min() - 0.5, X[:, 1].max() + 0.5)
+# plt.show()
+
+import matplotlib.pyplot as plt
+import networkx as nx
+
+def draw_neural_net(ax, layer_sizes):
+    """
+    Draw a neural network diagram.
+    :param ax: matplotlib Axes instance
+    :param layer_sizes: list of layer sizes
+    """
+    n_layers = len(layer_sizes)
+    v_spacing = 0.3
+    h_spacing = 0.5
+    radius = 0.08
+
+    # Create a graph and add nodes
+    G = nx.DiGraph()
+    for n, layer_size in enumerate(layer_sizes):
+        layer_top = v_spacing * (layer_size - 1) / 2.0 + (n_layers - n - 1) * v_spacing
+        for m in range(layer_size):
+            G.add_node((n, m), pos=(n * h_spacing, layer_top - m * v_spacing))
+
+    # Connect nodes with edges
+    for n in range(1, n_layers):
+        for m in range(layer_sizes[n - 1]):
+            for o in range(layer_sizes[n]):
+                G.add_edge((n - 1, m), (n, o))
+
+    # Draw the graph
+    pos = nx.get_node_attributes(G, 'pos')
+    nx.draw(G, pos, ax=ax, with_labels=False, node_color="skyblue", node_size=2000, edge_color="gray")
+
+    # Draw node labels
+    for layer, size in enumerate(layer_sizes):
+        layer_top = v_spacing * (size - 1) / 2.0 + (n_layers - layer - 1) * v_spacing
+        for n in range(size):
+            plt.text(layer * h_spacing, layer_top - n * v_spacing, 'O', ha='center', va='center', fontsize=20)
+
+    # Add layer names
+    layer_names = ['Input Layer (2 nodes)', 'Hidden Layer 1 (10 nodes)', 'Hidden Layer 2 (5 nodes)', 'Output Layer (1 node)']
+    for n, label in enumerate(layer_names):
+        plt.text(n * h_spacing, 2, label, ha='center', va='center', fontsize=15)
+
+# Visualize the neural network
+fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+draw_neural_net(ax, [2, 10, 5, 1])
+plt.title('Neural Network Architecture')
+plt.show()

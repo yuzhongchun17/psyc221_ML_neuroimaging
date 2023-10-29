@@ -1,0 +1,24 @@
+from scipy.stats import chi2,chisquare
+from scipy.stats import chi2_contingency # Chi-squared test
+
+# problem 4: one sample chi-sqaured test
+problem = 'c' # define classifier model
+if problem == 'a':
+    observed = [13,3] # model 1
+    expected = [8,8] #random guessing
+elif problem == 'b':
+    observed = [5,11] # model 2
+    expected = [8,8] #random guessing
+elif problem == 'c':
+    observed = [13,3] # model 1
+    expected = [5,11] # model 2
+
+
+
+# chi-square statistic & p-value
+chi2, p_value = chisquare(observed,expected)
+df = 1  # replace with your degrees of freedom
+
+print(f"Chi-square statistic: {chi2}")
+print(f"Degrees of freedom: {df}")
+print(f"P-value: {p_value}")

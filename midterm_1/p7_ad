@@ -1,0 +1,58 @@
+import numpy as np
+from scipy.stats import pearsonr # Pearson Correlation
+from scipy.stats import mannwhitneyu # Mann-Whitney U-test
+from scipy.stats import ttest_rel # paired t-test
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+import matplotlib.pyplot as plt
+
+# prepare data
+patient_id = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+left_hippocampus = [7000, 6950, 7020, 6800, 6780, 7030, 6750, 7010, 6790, 6760]
+right_hippocampus = [7050, 6900, 6980, 6850, 6800, 7000, 6740, 7060, 6820, 6770]
+label = [0, 0, 0, 1, 1, 0, 1, 0, 1, 1]
+# # Combining the two volume features into one dataset
+# X = list(zip(left_hippocampus, right_hippocampus))
+# y = label
+
+
+# ------------------------------ data exploration
+# # 7a. pearson correlations
+# corr_left = pearsonr(left_hippocampus, label)
+# corr_right = pearsonr(right_hippocampus, label)
+# print("Correlation between left hippocampus volume and disease label:", corr_left)
+# print("Correlation between right hippocampus volume and disease label:", corr_right)
+# # 7b.  mannwhitneyu (nonparametric two sample t test)
+# U, p = mannwhitneyu(left_hippocampus, right_hippocampus)
+# print(f'u-statistic with Mann-Whitney U-test: {U:.4f}')
+# print(f'p-value with Mann-Whitney U-test: {p:.4f}')
+
+# # 7b. paired t-test (if two dataset are normally distributed)
+# t_stat, p_val = ttest_rel(left_hippocampus, right_hippocampus)
+# print("T-statistic:", t_stat)
+# print("P-value:", p_val)
+
+# -------------------------- linear regression
+covariates = sm.add_constant(np.column_stack((left_hippocampus, right_hippocampus)))
+model = sm.GLM(label,covariates).fit()
+print(model.params)
+# # # Getting coefficients
+# # left_coef, right_coef = model.coef_
+# # intercept = model.intercept_
+# # r_squared = model.score(X, y)
+# # Predicting the Z values for the regression plane
+# x_surface, y_surface = np.meshgrid(np.linspace(min(left_hippocampus), max(left_hippocampus), 10),
+#                                    np.linspace(min(right_hippocampus), max(right_hippocampus), 10))
+# z_surface = model.intercept_ + model.coef_[0]*x_surface + model.coef_[1]*y_surface
+
+# # Plotting
+# fig = plt.figure(figsize=(10,7))
+# ax = fig.add_subplot(111, projection='3d')
+# ax.scatter(left_hippocampus, right_hippocampus, y, color='b', s=50, alpha=0.6, edgecolors='w', linewidth=0.5)
+# ax.plot_surface(x_surface, y_surface, z_surface, color='r', alpha=0.5)
+# ax.set_xlabel('Left Hippocampus Volume')
+# ax.set_ylabel('Right Hippocampus Volume')
+# ax.set_zlabel('Disease Label')
+# ax.set_title('3D Scatter with Regression Plane')
+# plt.show()
+# classification
