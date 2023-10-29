@@ -14,7 +14,6 @@ elif problem == 'c':
     expected = [5,11] # model 2
 
 
-
 # chi-square statistic & p-value
 chi2, p_value = chisquare(observed,expected)
 df = 1  # replace with your degrees of freedom
