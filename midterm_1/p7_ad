@@ -1,59 +1,162 @@
 import numpy as np
-from scipy.stats import pearsonr # Pearson Correlation
-from scipy.stats import mannwhitneyu # Mann-Whitney U-test
-from scipy.stats import ttest_rel # paired t-test
-from sklearn.linear_model import LinearRegression
+from scipy.stats import pearsonr
+from scipy.stats import mannwhitneyu
+from scipy.stats import ttest_rel
 import statsmodels.api as sm
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import KFold
+from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
-# prepare data
+# Data
 patient_id = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 left_hippocampus = [7000, 6950, 7020, 6800, 6780, 7030, 6750, 7010, 6790, 6760]
 right_hippocampus = [7050, 6900, 6980, 6850, 6800, 7000, 6740, 7060, 6820, 6770]
 label = [0, 0, 0, 1, 1, 0, 1, 0, 1, 1]
-# # Combining the two volume features into one dataset
-# X = list(zip(left_hippocampus, right_hippocampus))
-# y = label
-
-
-# ------------------------------ data exploration
-# # 7a. pearson correlations
-# corr_left = pearsonr(left_hippocampus, label)
-# corr_right = pearsonr(right_hippocampus, label)
-# print("Correlation between left hippocampus volume and disease label:", corr_left)
-# print("Correlation between right hippocampus volume and disease label:", corr_right)
-# # 7b.  mannwhitneyu (nonparametric two sample t test)
-# U, p = mannwhitneyu(left_hippocampus, right_hippocampus)
-# print(f'u-statistic with Mann-Whitney U-test: {U:.4f}')
-# print(f'p-value with Mann-Whitney U-test: {p:.4f}')
-
-# # 7b. paired t-test (if two dataset are normally distributed)
-# t_stat, p_val = ttest_rel(left_hippocampus, right_hippocampus)
-# print("T-statistic:", t_stat)
-# print("P-value:", p_val)
-
-# -------------------------- linear regression
 data = np.column_stack((left_hippocampus, right_hippocampus))
-covariates = sm.add_constant(data)
-model = sm.GLM(label,covariates).fit()
-print(model.params)
-# # # Getting coefficients
-# # left_coef, right_coef = model.coef_
-# # intercept = model.intercept_
-# # r_squared = model.score(X, y)
-# # Predicting the Z values for the regression plane
-# x_surface, y_surface = np.meshgrid(np.linspace(min(left_hippocampus), max(left_hippocampus), 10),
-#                                    np.linspace(min(right_hippocampus), max(right_hippocampus), 10))
-# z_surface = model.intercept_ + model.coef_[0]*x_surface + model.coef_[1]*y_surface
 
-# # Plotting
-# fig = plt.figure(figsize=(10,7))
-# ax = fig.add_subplot(111, projection='3d')
-# ax.scatter(left_hippocampus, right_hippocampus, y, color='b', s=50, alpha=0.6, edgecolors='w', linewidth=0.5)
-# ax.plot_surface(x_surface, y_surface, z_surface, color='r', alpha=0.5)
-# ax.set_xlabel('Left Hippocampus Volume')
-# ax.set_ylabel('Right Hippocampus Volume')
-# ax.set_zlabel('Disease Label')
-# ax.set_title('3D Scatter with Regression Plane')
+# Setting up KFold cross-validation
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+# Placeholder lists for metrics
+r2_scores = []
+accuracies = []
+precisions = []
+recalls = []
+f1s = []
+tprs = []
+mean_fpr = np.linspace(0, 1, 100)
+roc_aucs = []
+
+for train_index, test_index in kf.split(data):
+    X_train, X_test = data[train_index], data[test_index]
+    y_train, y_test = np.array(label)[train_index], np.array(label)[test_index]
+    
+    covariates_train = sm.add_constant(X_train)
+    covariates_test = sm.add_constant(X_test)
+
+    model = sm.OLS(y_train, covariates_train).fit()
+    
+    # Collect metrics
+    r2_scores.append(model.rsquared)
+    
+    predicted_probs = model.predict(covariates_test)
+    threshold = 0.5
+    predicted_labels = (predicted_probs > threshold).astype(int)
+
+    accuracies.append(accuracy_score(y_test, predicted_labels))
+    precisions.append(precision_score(y_test, predicted_labels))
+    recalls.append(recall_score(y_test, predicted_labels))
+    f1s.append(f1_score(y_test, predicted_labels))
+     # Compute ROC curve
+    fpr, tpr, thresholds = roc_curve(y_test, predicted_probs)
+    roc_aucs.append(auc(fpr, tpr))
+    tprs.append(np.interp(mean_fpr, fpr, tpr))
+    tprs[-1][0] = 0.0
+
+# Printing the average metrics over all the folds
+print(f"Average R2 Score: {np.mean(r2_scores)}")
+print(f"Average Accuracy: {np.mean(accuracies)}")
+print(f"Average Precision: {np.mean(precisions)}")
+print(f"Average Recall: {np.mean(recalls)}")
+print(f"Average F1 Score: {np.mean(f1s)}")
+
+mean_tpr = np.mean(tprs, axis=0)
+mean_tpr[-1] = 1.0
+mean_auc = auc(mean_fpr, mean_tpr)
+
+# Plotting the average ROC curve
+plt.figure()
+plt.plot(mean_fpr, mean_tpr, color='darkorange', lw=2, label='Mean ROC curve (area = %0.2f)' % mean_auc)
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve - Cross Validation')
+plt.legend(loc="lower right")
+plt.show()
+# import numpy as np
+# from scipy.stats import pearsonr # Pearson Correlation
+# from scipy.stats import mannwhitneyu # Mann-Whitney U-test
+# from scipy.stats import ttest_rel # paired t-test
+# from sklearn.linear_model import LinearRegression
+# import statsmodels.api as sm
+# import matplotlib.pyplot as plt
+
+# # prepare data
+# patient_id = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# left_hippocampus = [7000, 6950, 7020, 6800, 6780, 7030, 6750, 7010, 6790, 6760]
+# right_hippocampus = [7050, 6900, 6980, 6850, 6800, 7000, 6740, 7060, 6820, 6770]
+# label = [0, 0, 0, 1, 1, 0, 1, 0, 1, 1]
+# # # Combining the two volume features into one dataset
+# # X = list(zip(left_hippocampus, right_hippocampus))
+# # y = label
+
+
+# # ------------------------------ data exploration
+# # # 7a. pearson correlations
+# # corr_left = pearsonr(left_hippocampus, label)
+# # corr_right = pearsonr(right_hippocampus, label)
+# # print("Correlation between left hippocampus volume and disease label:", corr_left)
+# # print("Correlation between right hippocampus volume and disease label:", corr_right)
+# # # 7b.  mannwhitneyu (nonparametric two sample t test)
+# # U, p = mannwhitneyu(left_hippocampus, right_hippocampus)
+# # print(f'u-statistic with Mann-Whitney U-test: {U:.4f}')
+# # print(f'p-value with Mann-Whitney U-test: {p:.4f}')
+
+# # # 7b. paired t-test (if two dataset are normally distributed)
+# # t_stat, p_val = ttest_rel(left_hippocampus, right_hippocampus)
+# # print("T-statistic:", t_stat)
+# # print("P-value:", p_val)
+
+# # -------------------------- linear regression
+# data = np.column_stack((left_hippocampus, right_hippocampus))
+# covariates = sm.add_constant(data)
+# # model = sm.GLM(label,covariates,family=sm.families.Gamma()).fit()
+# # print("bete:",model.params)
+# model = sm.OLS(label,covariates).fit()
+# print("beta:",model.params[2])
+# print("R2:",model.rsquared)
+# beta0 = model.params[0]
+# beta1 = model.params[1]
+# beta2 = model.params[2]
+
+# from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# # Assuming the fitted model is already available as 'model'
+# predicted_probs = model.predict(covariates)
+
+# # Choose a threshold. For simplicity, let's use 0.5
+# threshold = 0.5
+# predicted_labels = (predicted_probs > threshold).astype(int)
+
+# accuracy = accuracy_score(label, predicted_labels)
+# precision = precision_score(label, predicted_labels)
+# recall = recall_score(label, predicted_labels)
+# f1 = f1_score(label, predicted_labels)
+
+# print(f"Accuracy: {accuracy}")
+# print(f"Precision: {precision}")
+# print(f"Recall: {recall}")
+# print(f"F1 Score: {f1}")
+
+# #visualization
+# # Assuming left_hippocampus_volume, right_hippocampus_volume, and disease_label are already defined
+# left = np.array(left_hippocampus)
+# right = np.array(right_hippocampus) 
+
+# # Predicted values based on the regression model
+# predicted= beta0 + beta1 * left + beta2 * right
+
+# # Plotting the Left Hippocampus Volume vs. Disease Label
+# plt.figure(figsize=(10, 6))
+# plt.scatter(left, label, c='b', label="Left Data")
+# plt.scatter(right, label, c='g', label="Right Data")
+# plt.plot(left, predicted, 'r-', label="Regression Line")
+# plt.xlabel('Left Hippocampus Volume')
+# plt.ylabel('Disease Label')
+# plt.title('Left Hippocampus Volume vs. Disease Label')
+# plt.legend()
 # plt.show()
-# classification
+# plt.show()
