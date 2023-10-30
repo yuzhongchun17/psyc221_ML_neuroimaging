@@ -31,17 +31,18 @@ roc_aucs = []
 for train_index, test_index in kf.split(data):
     X_train, X_test = data[train_index], data[test_index]
     y_train, y_test = np.array(label)[train_index], np.array(label)[test_index]
+    print(y_train,y_test)
     
     covariates_train = sm.add_constant(X_train)
     covariates_test = sm.add_constant(X_test)
 
-    model = sm.OLS(y_train, covariates_train).fit()
+    model = sm.GLM(y_train, covariates_train, sm.families.Binomial()).fit()
     
-    # Collect metrics
-    r2_scores.append(model.rsquared)
+    # # Collect metrics
+    # r2_scores.append(model.rsquared)
     
     predicted_probs = model.predict(covariates_test)
-    threshold = 0.5
+    threshold = 0.8
     predicted_labels = (predicted_probs > threshold).astype(int)
 
     accuracies.append(accuracy_score(y_test, predicted_labels))
@@ -55,7 +56,7 @@ for train_index, test_index in kf.split(data):
     tprs[-1][0] = 0.0
 
 # Printing the average metrics over all the folds
-print(f"Average R2 Score: {np.mean(r2_scores)}")
+# print(f"Average R2 Score: {np.mean(r2_scores)}")
 print(f"Average Accuracy: {np.mean(accuracies)}")
 print(f"Average Precision: {np.mean(precisions)}")
 print(f"Average Recall: {np.mean(recalls)}")
