@@ -1,6 +1,7 @@
 import numpy as np
 import statsmodels.api as sm
 from sklearn.metrics import roc_curve, auc
+from sklearn.model_selection import StratifiedKFold
 import matplotlib.pyplot as plt
 
 # Data
@@ -9,24 +10,85 @@ right_hippocampus = [7050, 6900, 6980, 6850, 6800, 7000, 6740, 7060, 6820, 6770]
 label = [0, 0, 0, 1, 1, 0, 1, 0, 1, 1]
 data = np.column_stack((left_hippocampus, right_hippocampus))
 
-covariates = sm.add_constant(data)
-model = sm.OLS(label, covariates).fit()
+# 5-fold Stratified Cross-Validation
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+tprs = []
+mean_fpr = np.linspace(0, 1, 100)
+roc_aucs = []
 
-# Predicted probabilities of positive class
-predicted_probs = model.predict(covariates)
+# # Loop over the folds
+# for train_index, test_index in skf.split(data, label):
+#     X_train, X_test = data[train_index], data[test_index]
+#     y_train, y_test = np.array(label)[train_index], np.array(label)[test_index]
+    
+#     # Add constant for intercept
+#     covariates_train = sm.add_constant(X_train)
+#     covariates_test = sm.add_constant(X_test)
+    
+#     # Fit the GLM model
+#     model = sm.GLM(y_train, covariates_train, family=sm.families.Gaussian()).fit(disp=0)
+#     predicted_probs = model.predict(covariates_test)
+    
+#     # Compute ROC curve for this fold
+#     fpr, tpr, _ = roc_curve(y_test, predicted_probs)
+#     tprs.append(np.interp(mean_fpr, fpr, tpr))
+#     tprs[-1][0] = 0.0
+#     roc_aucs.append(auc(fpr, tpr))
 
-# Compute ROC curve and ROC area
-fpr, tpr, thresholds = roc_curve(label, predicted_probs)
-roc_auc = auc(fpr, tpr)
+# # Plotting the ROC curve
+# mean_tpr = np.mean(tprs, axis=0)
+# mean_tpr[-1] = 1.0
+# mean_auc = auc(mean_fpr, mean_tpr)
+# plt.figure()
+# plt.plot(mean_fpr, mean_tpr, color='darkorange', lw=2, label='Mean ROC curve (area = %0.2f)' % mean_auc)
+# plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+# plt.xlim([0.0, 1.0])
+# plt.ylim([0.0, 1.05])
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.title('Receiver Operating Characteristic (ROC) Curve')
+# plt.legend(loc="lower right")
+# plt.show()
 
-# Plotting the ROC curve
-plt.figure()
-plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Receiver Operating Characteristic (ROC) Curve')
-plt.legend(loc="lower right")
-plt.show()
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
+
+#... [your previous code for data and skf initialization]
+
+accuracies = []
+precisions = []
+recalls = []
+f_scores = []
+
+# Loop over the folds
+for train_index, test_index in skf.split(data, label):
+    X_train, X_test = data[train_index], data[test_index]
+    y_train, y_test = np.array(label)[train_index], np.array(label)[test_index]
+    
+    # Add constant for intercept
+    covariates_train = sm.add_constant(X_train)
+    covariates_test = sm.add_constant(X_test)
+    
+    # Fit the GLM model
+    model = sm.GLM(y_train, covariates_train, family=sm.families.Binomial()).fit(disp=0)
+    predicted_probs = model.predict(covariates_test)
+    print("input:",covariates_test)
+    print("output:",predicted_probs)
+    predicted_classes = [1 if p > 0.5 else 0 for p in predicted_probs]  # Assuming a threshold of 0.5 for classification
+    
+    # Compute metrics for this fold
+    accuracies.append(accuracy_score(y_test, predicted_classes))
+    precisions.append(precision_score(y_test, predicted_classes))
+    recalls.append(recall_score(y_test, predicted_classes))
+    f_scores.append(f1_score(y_test, predicted_classes))
+
+# Compute average metrics
+average_accuracy = np.mean(accuracies)
+average_precision = np.mean(precisions)
+average_recall = np.mean(recalls)
+average_f_score = np.mean(f_scores)
+
+print(f"Average Accuracy: {average_accuracy:.4f}")
+print(f"Average Precision: {average_precision:.4f}")
+print(f"Average Recall: {average_recall:.4f}")
+print(f"Average F-score: {average_f_score:.4f}")
+
